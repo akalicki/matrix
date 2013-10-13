@@ -1,4 +1,4 @@
-# Matrix
+# Matrix.cpp
 
 A simple mathematical matrix class written in C++ to be reused for future 
 assignments in my Computational Linear Algebra class. The Matrix class comes 
