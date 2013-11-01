@@ -5,6 +5,8 @@
 #include <stdexcept>
 #include "matrix.h"
 
+#define EPS 1e-10
+
 using std::ostream;  using std::istream;  using std::endl;
 using std::domain_error;
 
@@ -119,6 +121,14 @@ Matrix Matrix::operator^(int num)
     return expHelper(temp, num);
 }
 
+void Matrix::swapRows(int r1, int r2)
+{
+    double *temp = p[r1];
+    p[r1] = p[r2];
+    p[r2] = temp;
+}
+
+
 /* STATIC CLASS FUNCTIONS
  ********************************/
 
@@ -200,6 +210,193 @@ Matrix Matrix::bandSolve(Matrix A, Matrix b, int k)
     }
 
     return x;
+}
+
+// functions on AUGMENTED matrices
+Matrix Matrix::augment(Matrix A, Matrix b)
+{
+    Matrix Ab(A.rows_, A.cols_ + b.cols_);
+    for (int i = 0; i < Ab.rows_; ++i) {
+        for (int j = 0; j < Ab.cols_; ++j) {
+            if (j == Ab.cols_ - 1)
+                Ab(i, j) = b(i, 0);
+            else
+                Ab(i, j) = A(i, j);
+        }
+    }
+    return Ab;
+}
+
+Matrix Matrix::gaussianEliminate()
+{
+    Matrix Ab(*this);
+    int rows = Ab.rows_;
+    int cols = Ab.cols_;
+    int Acols = cols - 1;
+
+    int i = 0; // row tracker
+    int j = 0; // column tracker
+
+    // iterate through the rows
+    while (i < rows)
+    {
+        // find a pivot for the row
+        bool pivot_found = false;
+        while (j < Acols && !pivot_found)
+        {
+            if (Ab(i, j) != 0) { // pivot not equal to 0
+                pivot_found = true;
+            } else { // check for a possible swap
+                int max_row = i;
+                double max_val = 0;
+                for (int k = i + 1; k < rows; ++k)
+                {
+                    double cur_abs = Ab(k, j) >= 0 ? Ab(k, j) : -1 * Ab(k, j);
+                    if (cur_abs > max_val)
+                    {
+                        max_row = k;
+                        max_val = cur_abs;
+                    }
+                }
+                if (max_row != i) {
+                    Ab.swapRows(max_row, i);
+                    pivot_found = true;
+                } else {
+                    j++;
+                }
+            }
+        }
+
+        // perform elimination as normal if pivot was found
+        if (pivot_found)
+        {
+            for (int t = i + 1; t < rows; ++t) {
+                for (int s = j + 1; s < cols; ++s) {
+                    Ab(t, s) = Ab(t, s) - Ab(i, s) * (Ab(t, j) / Ab(i, j));
+                    if (Ab(t, s) < EPS && Ab(t, s) > -1*EPS)
+                        Ab(t, s) = 0;
+                }
+                Ab(t, j) = 0;
+            }
+        }
+
+        i++;
+        j++;
+    }
+
+    return Ab;
+}
+
+Matrix Matrix::rowReduceFromGaussian()
+{
+    Matrix R(*this);
+    int rows = R.rows_;
+    int cols = R.cols_;
+
+    int i = rows - 1; // row tracker
+    int j = cols - 2; // column tracker
+
+    // iterate through every row
+    while (i >= 0)
+    {
+        // find the pivot column
+        int k = j - 1;
+        while (k >= 0) {
+            if (R(i, k) != 0)
+                j = k;
+            k--;
+        }
+
+        // zero out elements above pivots if pivot not 0
+        if (R(i, j) != 0) {
+       
+            for (int t = i - 1; t >= 0; --t) {
+                for (int s = 0; s < cols; ++s) {
+                    if (s != j) {
+                        R(t, s) = R(t, s) - R(i, s) * (R(t, j) / R(i, j));
+                        if (R(t, s) < EPS && R(t, s) > -1*EPS)
+                            R(t, s) = 0;
+                    }
+                }
+                R(t, j) = 0;
+            }
+
+            // divide row by pivot
+            for (int k = j + 1; k < cols; ++k) {
+                R(i, k) = R(i, k) / R(i, j);
+                if (R(i, k) < EPS && R(i, k) > -1*EPS)
+                    R(i, k) = 0;
+            }
+            R(i, j) = 1;
+
+        }
+
+        i--;
+        j--;
+    }
+
+    return R;
+}
+
+void Matrix::readSolutionsFromRREF(ostream& os)
+{
+    Matrix R(*this);
+
+    // print number of solutions
+    bool hasSolutions = true;
+    bool doneSearching = false;
+    int i = 0;
+    while (!doneSearching && i < rows_)
+    {
+        bool allZeros = true;
+        for (int j = 0; j < cols_ - 1; ++j) {
+            if (R(i, j) != 0)
+                allZeros = false;
+        }
+        if (allZeros && R(i, cols_ - 1) != 0) {
+            hasSolutions = false;
+            os << "NO SOLUTIONS" << endl << endl;
+            doneSearching = true;
+        } else if (allZeros && R(i, cols_ - 1) == 0) {
+            os << "INFINITE SOLUTIONS" << endl << endl;
+            doneSearching = true;
+        } else if (rows_ < cols_ - 1) {
+            os << "INFINITE SOLUTIONS" << endl << endl;
+            doneSearching = true;
+        }
+        i++;
+    }
+    if (!doneSearching)
+        os << "UNIQUE SOLUTION" << endl << endl;
+
+    // get solutions if they exist
+    if (hasSolutions)
+    {
+        Matrix particular(cols_ - 1, 1);
+        Matrix special(cols_ - 1, 1);
+
+        for (int i = 0; i < rows_; ++i) {
+            bool pivotFound = false;
+            bool specialCreated = false;
+            for (int j = 0; j < cols_ - 1; ++j) {
+                if (R(i, j) != 0) {
+                    // if pivot variable, add b to particular
+                    if (!pivotFound) {
+                        pivotFound = true;
+                        particular(j, 0) = R(i, cols_ - 1);
+                    } else { // otherwise, add to special solution
+                        if (!specialCreated) {
+                            special = Matrix(cols_ - 1, 1);
+                            specialCreated = true;
+                        }
+                        special(j, 0) = -1 * R(i, j);
+                    }
+                }
+            }
+            os << "Special solution:" << endl << special << endl;
+        }
+        os << "Particular solution:" << endl << particular << endl;
+    }
 }
 
 

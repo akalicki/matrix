@@ -26,9 +26,18 @@ class Matrix {
         friend std::ostream& operator<<(std::ostream&, const Matrix&);
         friend std::istream& operator>>(std::istream&, Matrix&);
 
+        void swapRows(int, int);
+
         static Matrix createIdentity(int);
         static Matrix solve(Matrix, Matrix);
         static Matrix bandSolve(Matrix, Matrix, int);
+
+        // functions on augmented matrices
+        static Matrix augment(Matrix, Matrix);
+        Matrix gaussianEliminate();
+        Matrix rowReduceFromGaussian();
+        void readSolutionsFromRREF(std::ostream& os);
+
     private:
         int rows_, cols_;
         double **p;
