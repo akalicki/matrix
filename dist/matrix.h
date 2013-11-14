@@ -1,5 +1,6 @@
 /*
  * matrix.h
+ * Author: Alex Kalicki (https://github.com/akalicki)
  */
 
 #ifndef __MATRIX_H__
@@ -27,6 +28,7 @@ class Matrix {
         friend std::istream& operator>>(std::istream&, Matrix&);
 
         void swapRows(int, int);
+        Matrix transpose();
 
         static Matrix createIdentity(int);
         static Matrix solve(Matrix, Matrix);

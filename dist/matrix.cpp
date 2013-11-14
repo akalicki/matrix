@@ -1,5 +1,6 @@
 /*
  * matrix.cpp
+ * Author: Alex Kalicki (https://github.com/akalicki)
  */
 
 #include <stdexcept>
@@ -128,6 +129,17 @@ void Matrix::swapRows(int r1, int r2)
     p[r2] = temp;
 }
 
+Matrix Matrix::transpose()
+{
+    Matrix ret(cols_, rows_);
+    for (int i = 0; i < rows_; ++i) {
+        for (int j = 0; j < cols_; ++j) {
+            ret.p[j][i] = p[i][j];
+        }
+    }
+    return ret;
+}
+
 
 /* STATIC CLASS FUNCTIONS
  ********************************/
@@ -158,8 +170,12 @@ Matrix Matrix::solve(Matrix A, Matrix b)
         for (int j = i + 1; j < A.rows_; ++j) {
             for (int k = i + 1; k < A.cols_; ++k) {
                 A.p[j][k] -= A.p[i][k] * (A.p[j][i] / A.p[i][i]);
+                if (A.p[j][k] < EPS && A.p[j][k] > -1*EPS)
+                    A.p[j][k] = 0;
             }
             b.p[j][0] -= b.p[i][0] * (A.p[j][i] / A.p[i][i]);
+            if (A.p[j][0] < EPS && A.p[j][0] > -1*EPS)
+                A.p[j][0] = 0;
             A.p[j][i] = 0;
         }
     }
@@ -167,12 +183,16 @@ Matrix Matrix::solve(Matrix A, Matrix b)
     // Back substitution
     Matrix x(b.rows_, 1);
     x.p[x.rows_ - 1][0] = b.p[x.rows_ - 1][0] / A.p[x.rows_ - 1][x.rows_ - 1];
+    if (x.p[x.rows_ - 1][0] < EPS && x.p[x.rows_ - 1][0] > -1*EPS)
+        x.p[x.rows_ - 1][0] = 0;
     for (int i = x.rows_ - 2; i >= 0; --i) {
         int sum = 0;
         for (int j = i + 1; j < x.rows_; ++j) {
             sum += A.p[i][j] * x.p[j][0];
         }
         x.p[i][0] = (b.p[i][0] - sum) / A.p[i][i];
+        if (x.p[i][0] < EPS && x.p[i][0] > -1*EPS)
+            x.p[i][0] = 0;
     }
 
     return x;
