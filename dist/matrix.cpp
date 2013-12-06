@@ -1,6 +1,5 @@
 /*
  * matrix.cpp
- * Author: Alex Kalicki (https://github.com/akalicki)
  */
 
 #include <stdexcept>
@@ -111,6 +110,16 @@ Matrix& Matrix::operator*=(double num)
     for (int i = 0; i < rows_; ++i) {
         for (int j = 0; j < cols_; ++j) {
             p[i][j] *= num;
+        }
+    }
+    return *this;
+}
+
+Matrix& Matrix::operator/=(double num)
+{
+    for (int i = 0; i < rows_; ++i) {
+        for (int j = 0; j < cols_; ++j) {
+            p[i][j] /= num;
         }
     }
     return *this;
@@ -232,19 +241,29 @@ Matrix Matrix::bandSolve(Matrix A, Matrix b, int k)
     return x;
 }
 
-// functions on AUGMENTED matrices
-Matrix Matrix::augment(Matrix A, Matrix b)
+// functions on VECTORS
+double Matrix::dotProduct(Matrix a, Matrix b)
 {
-    Matrix Ab(A.rows_, A.cols_ + b.cols_);
-    for (int i = 0; i < Ab.rows_; ++i) {
-        for (int j = 0; j < Ab.cols_; ++j) {
-            if (j == Ab.cols_ - 1)
-                Ab(i, j) = b(i, 0);
+    double sum = 0;
+    for (int i = 0; i < a.rows_; ++i) {
+        sum += (a(i, 0) * b(i, 0));
+    }
+    return sum;
+}
+
+// functions on AUGMENTED matrices
+Matrix Matrix::augment(Matrix A, Matrix B)
+{
+    Matrix AB(A.rows_, A.cols_ + B.cols_);
+    for (int i = 0; i < AB.rows_; ++i) {
+        for (int j = 0; j < AB.cols_; ++j) {
+            if (j < A.cols_)
+                AB(i, j) = A(i, j);
             else
-                Ab(i, j) = A(i, j);
+                AB(i, j) = B(i, j - B.cols_);
         }
     }
-    return Ab;
+    return AB;
 }
 
 Matrix Matrix::gaussianEliminate()
@@ -419,6 +438,21 @@ void Matrix::readSolutionsFromRREF(ostream& os)
     }
 }
 
+Matrix Matrix::inverse()
+{
+    Matrix I = Matrix::createIdentity(rows_);
+    Matrix AI = Matrix::augment(*this, I);
+    Matrix U = AI.gaussianEliminate();
+    Matrix IAInverse = U.rowReduceFromGaussian();
+    Matrix AInverse(rows_, cols_);
+    for (int i = 0; i < AInverse.rows_; ++i) {
+        for (int j = 0; j < AInverse.cols_; ++j) {
+            AInverse(i, j) = IAInverse(i, j + cols_);
+        }
+    }
+    return AInverse;
+}
+
 
 /* PRIVATE HELPER FUNCTIONS
  ********************************/
@@ -474,6 +508,12 @@ Matrix operator*(const Matrix& m, double num)
 Matrix operator*(double num, const Matrix& m)
 {
     return (m * num);
+}
+
+Matrix operator/(const Matrix& m, double num)
+{
+    Matrix temp(m);
+    return (temp /= num);
 }
 
 ostream& operator<<(ostream& os, const Matrix& m)
