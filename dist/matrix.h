@@ -10,6 +10,7 @@
 class Matrix {
     public:
         Matrix(int, int);
+        Matrix(double**, int, int);
         Matrix();
         ~Matrix();
         Matrix(const Matrix&);
