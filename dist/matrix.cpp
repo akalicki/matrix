@@ -528,7 +528,7 @@ ostream& operator<<(ostream& os, const Matrix& m)
     return os;
 }
 
-istream& operator>>(istream& is, Matrix& m)
+istream& operator>>(istream& is, const Matrix& m)
 {
     for (int i = 0; i < m.rows_; ++i) {
         for (int j = 0; j < m.cols_; ++j) {
